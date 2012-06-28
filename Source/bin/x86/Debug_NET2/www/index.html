@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+	<link rel="stylesheet" href="style.css" />
+	<script type="text/javascript" src="jquery.js"></script>
+	<script type="text/javascript" src="jquery.keyframes.js"></script>
+	<script type="text/javascript">
+		$(window).load(function(){
+			setDragBar();
+			form.setup(753, 465,'WinGap Test App','None',false,'');
+			
+			$.fn.addKeyframe([{
+				name: "earth-rotate",
+				"from": $.keyframe.browserCode()+"transform:rotate(0deg)",
+				"to": $.keyframe.browserCode()+"transform:rotate(360deg)",
+			}]);
+			$('.earth').playKeyframe('earth-rotate 500000 linear 0 infinite normal forwards');
+			var times = [{
+				name: "London",
+				calc: 0
+			},{
+				name: "New York",
+				calc: -4
+			},{
+				name: "Austin",
+				calc: -6
+			},{
+				name: "Los Angeles",
+				calc: -8
+			},{
+				name: "Wellington",
+				calc: 12
+			},{
+				name: "Canberra",
+				calc: 10
+			},{
+				name: "Perth",
+				calc: 8
+			}];
+			updateTimes(times);
+			setInterval(function(){ updateTimes(times); },1000);
+		});
+		
+		function updateTimes(times){
+			var d = new Date();
+			var toadd = '';
+			$.each(times, function(index,time){
+				var n = new Date();
+				n.setHours(d.getHours()+time.calc);
+				var newtime = n.toLocaleString().substring(0,n.toLocaleString().lastIndexOf(' '));
+				toadd += '<li><b>'+time.name+'</b>: '+newtime+'</li>';
+			});
+			$('ul').html(toadd);
+		}
+		
+		window.onresize = function(){
+			setDragBar();
+		}
+		
+		function setDragBar(){
+			form.setDragBar(150,2,$('body').width()-210,37,'111111','');
+		}
+	</script>
+</head>
+<body>
+	<div class="formContainer">
+		<div class="formHeader">
+			<b>WinGap Test App</b>
+			<div class="formHeaderTools" onclick="wingap.Quit()">X</div>
+		</div>
+		<div class="formContent">
+			<div class="earth-container"><div class="earth"></div></div>
+			<ul></ul>
+		</div>
+	</div>
+</body>
+</html>

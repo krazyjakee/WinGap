@@ -1,0 +1,47 @@
+html,body{
+	padding:0px;
+	margin:0px;
+	height:100%;
+	color: #ffffff;
+	background-image:url(bg.jpg);
+	overflow:hidden;
+	font-family:Tahoma;
+}
+h1{
+	margin:0;
+	padding:0;
+}
+.formContainer{
+
+}
+.formHeader{
+	color: #ffffff;
+	padding:10px;
+	background-color:#111111;
+}
+.formHeaderTools{
+	float:right;
+	cursor:pointer;
+	margin-right:10px;
+}
+.formContent{
+	width:100%;
+	color:white;
+}
+.earth-container{
+	position:relative;
+	float:right;
+	overflow:hidden;
+	width:300px;
+	height:400px;
+	margin-top:-15px;
+}
+.earth{
+	background-image:url(earth.png);
+	width:800px;
+	height:790px;
+	margin-top:-400px;
+}
+li{
+	font-size:14px;
+}
