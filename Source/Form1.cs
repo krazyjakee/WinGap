@@ -91,7 +91,7 @@ namespace WinGap
             this.Width = width;
             this.Height = height;
         }
-        public void setDragBar(int x, int y, int width, int height, string bgcolor, string bgimage)
+        public void setDragBar(int x, int y, int width, int height, string bgcolor, string bgimage, bool repeat)
         {
             panel1.Visible = true;
             panel1.Left = x;
@@ -105,8 +105,22 @@ namespace WinGap
             if (bgimage.Length > 0)
             {
                 string url = new Uri(Environment.CurrentDirectory.Replace('\\', '/') + "/www/" + bgimage, UriKind.Absolute).AbsoluteUri;
-                panel1.BackgroundImage = Image.FromFile(url);
+                panel1.BackgroundImage = Image.FromFile(url.ToString());
             }
+
+            if (repeat)
+            {
+                panel1.BackgroundImageLayout = ImageLayout.Tile;
+            }
+            else
+            {
+                panel1.BackgroundImageLayout = ImageLayout.Stretch;
+            }
+        }
+
+        private void webKitBrowser1_Load(object sender, EventArgs e)
+        {
+
         }
 
     }

@@ -35,13 +35,14 @@
             // 
             // webKitBrowser1
             // 
-            resources.ApplyResources(this.webKitBrowser1, "webKitBrowser1");
             this.webKitBrowser1.AllowDrop = true;
+            resources.ApplyResources(this.webKitBrowser1, "webKitBrowser1");
             this.webKitBrowser1.BackColor = System.Drawing.Color.Black;
             this.webKitBrowser1.Name = "webKitBrowser1";
             this.webKitBrowser1.PrivateBrowsing = false;
             this.webKitBrowser1.Url = null;
             this.webKitBrowser1.Navigated += new System.Windows.Forms.WebBrowserNavigatedEventHandler(this.webKitBrowser1_Navigated);
+            this.webKitBrowser1.Load += new System.EventHandler(this.webKitBrowser1_Load);
             // 
             // panel1
             // 
