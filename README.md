@@ -17,7 +17,7 @@ Form Functions
   var transparencyKey = '000000';
   form.setDragBar(x, y, width, height, backgroundColor, backgroundColor, transparencyKey);
   
-  // With a dragbar in place we can begin to setup the other forum settings.
+  // With a dragbar in place we can begin to setup the other form settings.
   var width = 800;
   var height = 600;
   var title = 'Form 1';
