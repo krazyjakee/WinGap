@@ -43,7 +43,7 @@ namespace WinGap
             }
         }
 
-        public void logKeys()
+        public void keyListener()
         {
             Timer timer1 = new System.Windows.Forms.Timer();
             timer1.Interval = 50;
