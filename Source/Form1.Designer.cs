@@ -26,8 +26,9 @@
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent()
+        public void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.webKitBrowser1 = new WebKit.WebKitBrowser();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -68,6 +69,7 @@
 
         private WebKit.WebKitBrowser webKitBrowser1;
         public System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.Timer timer1;
 
     }
 }

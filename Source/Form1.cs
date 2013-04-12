@@ -24,8 +24,11 @@ namespace WinGap
         [DllImportAttribute("user32.dll")]
         public static extern bool ReleaseCapture();
         [DllImport("user32.dll")]
-        static extern void FlashWindow(IntPtr a, bool b); 
+        static extern void FlashWindow(IntPtr a, bool b);
         private const int CS_DROPSHADOW = 0x00020000;
+        [DllImport("User32.dll")]
+        private static extern short GetAsyncKeyState(System.Windows.Forms.Keys vKey); // Keys enumeration
+
         protected override CreateParams CreateParams
         {
             get
@@ -149,6 +152,5 @@ namespace WinGap
         {
 
         }
-
     }
 }

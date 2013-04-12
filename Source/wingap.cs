@@ -11,6 +11,15 @@ namespace WinGap
 {
     class wingap
     {
+
+        [DllImport("User32.dll")]
+        private static extern short GetAsyncKeyState(System.Windows.Forms.Keys vKey); // Keys enumeration
+
+        [DllImport("User32.dll")]
+        private static extern short GetAsyncKeyState(System.Int32 vKey);
+
+        public string activeKeys = string.Empty;
+
         public string helloWorld()
         {
             return "Hello World!";
@@ -31,6 +40,27 @@ namespace WinGap
             else
             {
                 Process.Start(@"" + address, args);
+            }
+        }
+
+        public void logKeys()
+        {
+            Timer timer1 = new System.Windows.Forms.Timer();
+            timer1.Interval = 50;
+            timer1.Tick += new System.EventHandler(timer1_Tick);
+            timer1.Start();
+        }
+
+        public void timer1_Tick(object sender, EventArgs e)
+        {
+            activeKeys = "";
+            foreach (System.Int32 i in Enum.GetValues(typeof(Keys)))
+            {
+                int x = GetAsyncKeyState(i);
+                if ((x == 1) || (x == Int16.MinValue))
+                {
+                    activeKeys += Enum.GetName(typeof(Keys), i) + " ";
+                }
             }
         }
     }
