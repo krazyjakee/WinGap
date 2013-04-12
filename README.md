@@ -57,4 +57,10 @@ WinGap Functions
   // Opens an application or url.
   wingap.open(address, args);
   
+  // Enable key listening
+  wingap.keyListener();
+  
+  // The current active key(s) variable to watch.
+  wingap.activeKeys;
+  
 ```
