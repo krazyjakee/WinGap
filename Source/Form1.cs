@@ -23,6 +23,8 @@ namespace WinGap
         public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
         [DllImportAttribute("user32.dll")]
         public static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]
+        static extern void FlashWindow(IntPtr a, bool b); 
         private const int CS_DROPSHADOW = 0x00020000;
         protected override CreateParams CreateParams
         {
@@ -116,6 +118,31 @@ namespace WinGap
             {
                 panel1.BackgroundImageLayout = ImageLayout.Stretch;
             }
+        }
+
+        public void minimize()
+        {
+            this.WindowState = FormWindowState.Minimized;
+        }
+
+        public void maximize()
+        {
+            this.WindowState = FormWindowState.Maximized;
+        }
+
+        public void resize(int width, int height)
+        {
+            this.Size = new Size(width,height);
+        }
+
+        public void focus()
+        {
+            this.Activate();
+        }
+
+        public void flash()
+        {
+            FlashWindow(this.Handle, true);
         }
 
         private void webKitBrowser1_Load(object sender, EventArgs e)

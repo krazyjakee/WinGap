@@ -22,3 +22,14 @@ G:\Users\Jake\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.Form1.res
 G:\Users\Jake\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.Properties.Resources.resources
 G:\Users\Jake\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\GenerateResource.read.1.tlog
 G:\Users\Jake\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\GenerateResource.write.1.tlog
+C:\Users\jakec\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.exe
+C:\Users\jakec\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.pdb
+C:\Users\jakec\Documents\GitHub\WinGap\Source\bin\x86\Debug_NET2\WinGap.exe
+C:\Users\jakec\Documents\GitHub\WinGap\Source\bin\x86\Debug_NET2\WinGap.pdb
+C:\Users\jakec\Documents\GitHub\WinGap\Source\bin\x86\Debug_NET2\MyDownloader.Core.dll
+C:\Users\jakec\Documents\GitHub\WinGap\Source\bin\x86\Debug_NET2\MyDownloader.Extension.dll
+C:\Users\jakec\Documents\GitHub\WinGap\Source\bin\x86\Debug_NET2\ICSharpCode.SharpZipLib.dll
+C:\Users\jakec\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.csprojResolveAssemblyReference.cache
+C:\Users\jakec\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.Form1.resources
+C:\Users\jakec\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.Properties.Resources.resources
+C:\Users\jakec\Documents\GitHub\WinGap\Source\obj\x86\Debug_NET2\WinGap.csproj.GenerateResource.Cache
