@@ -6,6 +6,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Net;
+using System.ComponentModel;
 
 namespace WinGap
 {

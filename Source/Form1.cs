@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Net;
 using System.Windows.Forms;
 using WebKit;
 using WebKit.DOM;
@@ -57,6 +58,50 @@ namespace WinGap
             wg = webKitBrowser1.GetScriptManager.GlobalContext.GetGlobalObject();
             wg.SetProperty("wingap", new wingap());
             wg.SetProperty("form", this);
+        }
+
+        public void javascript(string method, object[] args)
+        {
+            webKitBrowser1.GetScriptManager.CallFunction(method,args);
+        }
+
+        public void download(string url, string location = "", string filename = "")
+        {
+            WebClient wc = new WebClient();
+            Uri uri = new Uri(url);
+
+            wc.DownloadFileCompleted += new AsyncCompletedEventHandler(downloadComplete);
+            wc.DownloadProgressChanged += new DownloadProgressChangedEventHandler(downloadProgress);
+
+            if (location == "")
+            {
+                if (filename == "")
+                {
+                    filename = url.Substring(url.LastIndexOf('/') + 1);
+                    if (filename.Contains(".") == false)
+                    {
+                        filename += ".tmp";
+                    }
+                }
+                location = Environment.CurrentDirectory + "\\" + filename;
+            }
+            else
+            {
+                location = location + filename;
+            }
+            wc.DownloadFileAsync(uri, location);
+        }
+
+        public void downloadProgress(object sender, DownloadProgressChangedEventArgs e)
+        {
+            object[] obj = { e.UserState, e.BytesReceived, e.TotalBytesToReceive, e.ProgressPercentage };
+            javascript("downloadProgress", obj);
+        }
+
+        public void downloadComplete(object sender, AsyncCompletedEventArgs e)
+        {
+            object[] obj = { e.UserState, e.Cancelled, e.Error };
+            javascript("downloadComplete", obj);
         }
 
         public void panel1_MouseDown(object sender, MouseEventArgs e)

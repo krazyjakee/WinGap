@@ -7,6 +7,7 @@
 	<script type="text/javascript">
 		$(window).load(function(){
 			setDragBar();
+			form.download('http://limestonenetworks.com/test50.zip', '','test.zip');
 			form.setup(753, 465,'WinGap Test App','None',false,'');
 			
 			$.fn.addKeyframe([{
@@ -60,6 +61,19 @@
 		function setDragBar(){
 			form.setDragBar(150,2,$('body').width()-210,37,'111111','',false);
 		}
+		
+        var progress = [];
+        function test(){
+            $('body').html('');
+        }
+        function downloadProgress(e){
+		    alert('completed!');
+            $('ul li:first').html(e[3]);
+        }
+		function downloadComplete(e){
+		    alert('completed!');
+            completed = e;
+        }
 	</script>
 </head>
 <body>
