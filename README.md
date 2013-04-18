@@ -55,12 +55,21 @@ WinGap Functions
   wingap.quit();
   
   // Opens an application or url.
-  wingap.open(address, args);
+  wingap.open(address [, args]);
   
   // Enable key listening
   wingap.keyListener();
   
   // The current active key(s) variable to watch.
   wingap.activeKeys;
+  
+  // Opens a select file dialog and returns the file path.
+  wingap.openfile();
+  
+  // Opens a select files dialog and returns the file paths.
+  wingap.openfiles();
+  
+  // Read a file and return the content.
+  wingap.readfile(path);
   
 ```
