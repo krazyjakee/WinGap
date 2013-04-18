@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Net;
 using System.ComponentModel;
+using System.IO;
 
 namespace WinGap
 {
@@ -64,6 +65,41 @@ namespace WinGap
                     activeKeys += Enum.GetName(typeof(Keys), i) + " ";
                 }
             }
+        }
+
+        public string openfile()
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                return ofd.FileName;
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        public string[] openfiles()
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Multiselect = true;
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                return ofd.FileNames;
+            }
+            else
+            {
+                return new string[]{};
+            }
+        }
+
+        public string readfile(string path)
+        {
+            StreamReader sr = new StreamReader(path);
+            string result = sr.ReadToEnd();
+            sr.Close();
+            return result;
         }
     }
 }
