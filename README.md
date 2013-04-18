@@ -72,4 +72,7 @@ WinGap Functions
   // Read a file and return the content.
   wingap.readfile(path);
   
+  // Read a url and return the result.
+  wingap.readurl(address);
+  
 ```
