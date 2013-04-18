@@ -101,5 +101,15 @@ namespace WinGap
             sr.Close();
             return result;
         }
+
+        public string readurl(string url)
+        {
+            WebRequest req = WebRequest.Create(url);
+            req.Timeout = 10000;
+            WebResponse res = req.GetResponse();
+            StreamReader sr = new StreamReader(res.GetResponseStream());
+            string result = sr.ReadToEnd();
+            return result;
+        }
     }
 }

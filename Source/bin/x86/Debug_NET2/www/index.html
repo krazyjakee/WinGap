@@ -73,6 +73,10 @@
 		    alert('completed!');
             completed = e;
         }
+        
+        function testopen(){
+            $('#result').html(wingap.readurl('https://raw.github.com/krazyjakee/WinGap/master/README.md'));
+        }
 	</script>
 </head>
 <body>
@@ -84,6 +88,9 @@
 		<div class="formContent">
 			<div class="earth-container"><div class="earth"></div></div>
 			<ul></ul>
+			
+			<button onclick="testopen()">Test</button>
+			<i id="result"></i>
 		</div>
 	</div>
 </body>
