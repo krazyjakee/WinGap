@@ -102,6 +102,48 @@ namespace WinGap
             return result;
         }
 
+        public bool writefile(string path, string text)
+        {
+            StreamWriter sr = new StreamWriter(path);
+            try
+            {
+                sr.Write(text);
+            }
+            catch
+            {
+                return false;
+            }
+            sr.Close();
+            return true;
+        }
+
+        public bool createfile(string path)
+        {
+            try
+            {
+                FileStream fs = File.Create(path);
+                fs.Close();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool deletefile(string path)
+        {
+            try
+            {
+                File.Delete(path);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public string readurl(string url)
         {
             WebRequest req = WebRequest.Create(url);
