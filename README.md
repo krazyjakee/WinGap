@@ -72,6 +72,15 @@ WinGap Functions
   // Read a file and return the content.
   wingap.readfile(path);
   
+  // Write to a file.
+  wingap.writefile(path,string);
+  
+  // Create a file.
+  wingap.createfile(path);
+  
+  // Delete a file.
+  wingap.deletefile(path);
+  
   // Read a url and return the result.
   wingap.readurl(address);
   
