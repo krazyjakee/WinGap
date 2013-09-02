@@ -30,13 +30,10 @@
 
 /**
  * @constructor
- * @extends {WebInspector.HelpScreen}
  */
 WebInspector.ShortcutsScreen = function()
 {
-    WebInspector.HelpScreen.call(this, WebInspector.UIString("Keyboard Shortcuts"));
     this._sections = {};
-    this._tableReady = false;
 }
 
 WebInspector.ShortcutsScreen.prototype = {
@@ -48,52 +45,27 @@ WebInspector.ShortcutsScreen.prototype = {
         return section;
     },
 
-    show: function(onHide)
+    _createShortcutsTabView: function()
     {
-        this._buildTable(this.contentElement, 2);
-        WebInspector.HelpScreen.prototype.show.call(this, onHide);
-    },
-
-    _buildTable: function(parent, nColumns)
-    {
-        if (this._tableReady)
-            return;
-        this._tableReady = true;
-
-        var height = 0;
         var orderedSections = [];
-        for (var section in this._sections) {
-            height += this._sections[section]._height;
-            orderedSections.push(this._sections[section])
-        }
+        for (var section in this._sections)
+            orderedSections.push(this._sections[section]);
         function compareSections(a, b)
         {
             return a.order - b.order;
         }
-        orderedSections = orderedSections.sort(compareSections);
+        orderedSections.sort(compareSections);
 
-        const wrapAfter = height / nColumns;
-        var table = document.createElement("table");
-        table.className = "help-table";
-        var row = table.createChild("tr");
+        var view = new WebInspector.View();
 
-        // This manual layout ugliness should be gone once WebKit implements
-        // pagination hints for CSS columns (break-inside etc).
-        for (var section = 0; section < orderedSections.length;) {
-            var td = row.createChild("td");
-            td.style.width = (100 / nColumns) + "%";
-            var column = td.createChild("table");
-            for (var columnHeight = 0;
-                columnHeight < wrapAfter && section < orderedSections.length;
-                columnHeight += orderedSections[section]._height, section++) {
-                orderedSections[section].renderSection(column);
-            }
-        }
-        parent.appendChild(table);
+        var container = view.element;
+        container.className = "help-content help-container";
+        for (var i = 0; i < orderedSections.length; ++i)
+            orderedSections[i].renderSection(container);
+
+        return view;
     }
 }
-
-WebInspector.ShortcutsScreen.prototype.__proto__ = WebInspector.HelpScreen.prototype;
 
 /**
  * We cannot initialize it here as localized strings are not loaded yet.
@@ -134,25 +106,24 @@ WebInspector.ShortcutsSection.prototype = {
         this._lines.push({ key: keyElement, text: description })
     },
 
-    renderSection: function(parent)
+    /**
+     * @param {!Element} container
+     */
+    renderSection: function(container)
     {
-        this._renderHeader(parent);
+        var parent = container.createChild("div", "help-block");
 
-        for (var line = 0; line < this._lines.length; ++line) {
-            var tr = parent.createChild("tr");
-            var td = tr.createChild("td", "help-key-cell");
-            td.appendChild(this._lines[line].key);
-            td.appendChild(document.createTextNode(" : "));
-            tr.createChild("td").textContent = this._lines[line].text;
+        var headLine = parent.createChild("div", "help-line");
+        headLine.createChild("div", "help-key-cell");
+        headLine.createChild("div", "help-section-title help-cell").textContent = this.name;
+
+        for (var i = 0; i < this._lines.length; ++i) {
+            var line = parent.createChild("div", "help-line");
+            var keyCell = line.createChild("div", "help-key-cell");
+            keyCell.appendChild(this._lines[i].key);
+            keyCell.appendChild(this._createSpan("help-key-delimiter", ":"));
+            line.createChild("div", "help-cell").textContent = this._lines[i].text;
         }
-    },
-
-    _renderHeader: function(parent)
-    {
-        var trHead = parent.createChild("tr");
-
-        trHead.createChild("th");
-        trHead.createChild("th").textContent = this.name;
     },
 
     _renderSequence: function(sequence, delimiter)
@@ -165,11 +136,6 @@ WebInspector.ShortcutsSection.prototype = {
     {
         var plus = this._createSpan("help-combine-keys", "+");
         return this._joinNodes(key.split(" + ").map(this._createSpan.bind(this, "help-key monospace")), plus);
-    },
-
-    get _height()
-    {
-        return this._lines.length + 2; // add some space for header
     },
 
     _createSpan: function(className, textContent)

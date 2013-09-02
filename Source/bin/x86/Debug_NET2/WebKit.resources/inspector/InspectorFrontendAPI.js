@@ -95,6 +95,31 @@ InspectorFrontendAPI = {
         WebInspector.inspectorView.setCurrentPanel(WebInspector.panels.resources);
     },
 
+    setDockingUnavailable: function(unavailable)
+    {
+        WebInspector.setDockingUnavailable(unavailable);
+    },
+
+    enterInspectElementMode: function()
+    {
+        WebInspector.toggleSearchingForNode();
+    },
+
+    savedURL: function(url)
+    {
+        WebInspector.fileManager.savedURL(url);
+    },
+
+    appendedToURL: function(url)
+    {
+        WebInspector.fileManager.appendedToURL(url);
+    },
+
+    setToolbarColors: function(backgroundColor, color)
+    {
+        WebInspector.setToolbarColors(backgroundColor, color);
+    },
+
     dispatch: function(signature)
     {
         if (WebInspector.panels) {

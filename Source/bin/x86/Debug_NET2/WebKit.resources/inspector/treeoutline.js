@@ -28,8 +28,9 @@
 
 /**
  * @constructor
+ * @param {boolean=} nonFocusable
  */
-function TreeOutline(listNode)
+function TreeOutline(listNode, nonFocusable)
 {
     /**
      * @type {Array.<TreeElement>}
@@ -37,6 +38,7 @@ function TreeOutline(listNode)
     this.children = [];
     this.selectedTreeElement = null;
     this._childrenListNode = listNode;
+    this.childrenListElement = this._childrenListNode;
     this._childrenListNode.removeChildren();
     this.expandTreeElementsWhenArrowing = false;
     this.root = true;
@@ -48,12 +50,20 @@ function TreeOutline(listNode)
     this.searchable = false;
     this.searchInputElement = null;
 
-    this._childrenListNode.tabIndex = 0;
+    this.setFocusable(!nonFocusable);
     this._childrenListNode.addEventListener("keydown", this._treeKeyDown.bind(this), true);
     this._childrenListNode.addEventListener("keypress", this._treeKeyPress.bind(this), true);
     
     this._treeElementsMap = new Map();
     this._expandedStateMap = new Map();
+}
+
+TreeOutline.prototype.setFocusable = function(focusable)
+{
+    if (focusable)
+        this._childrenListNode.setAttribute("tabIndex", 0);
+    else
+        this._childrenListNode.removeAttribute("tabIndex");
 }
 
 TreeOutline.prototype.appendChild = function(child)
@@ -185,33 +195,6 @@ TreeOutline.prototype.removeChildren = function()
     this.children = [];
 }
 
-TreeOutline.prototype.removeChildrenRecursive = function()
-{
-    var childrenToRemove = this.children;
-
-    var child = this.children[0];
-    while (child) {
-        if (child.children.length)
-            childrenToRemove = childrenToRemove.concat(child.children);
-        child = child.traverseNextTreeElement(false, this, true);
-    }
-
-    for (var i = 0; i < childrenToRemove.length; ++i) {
-        child = childrenToRemove[i];
-        child.deselect();
-        if (child.treeOutline)
-            child.treeOutline._forgetTreeElement(child);
-        child._detach();
-        child.children = [];
-        child.treeOutline = null;
-        child.parent = null;
-        child.nextSibling = null;
-        child.previousSibling = null;
-    }
-
-    this.children = [];
-}
-
 TreeOutline.prototype._rememberTreeElement = function(element)
 {
     if (!this._treeElementsMap.get(element.representedObject))
@@ -326,7 +309,7 @@ TreeOutline.prototype.treeElementFromPoint = function(x, y)
 
 TreeOutline.prototype._treeKeyPress = function(event)
 {
-    if (!this.searchable)
+    if (!this.searchable || WebInspector.isBeingEdited(this._childrenListNode))
         return;
     
     var searchText = String.fromCharCode(event.charCode);
@@ -335,8 +318,7 @@ TreeOutline.prototype._treeKeyPress = function(event)
         return;
 
     this._startSearch(searchText);
-    event.preventDefault();
-    event.stopPropagation();
+    event.consume(true);
 }
 
 TreeOutline.prototype._treeKeyDown = function(event)
@@ -400,6 +382,9 @@ TreeOutline.prototype._treeKeyDown = function(event)
     } else if (isEnterKey(event)) {
         if (this.selectedTreeElement.onenter)
             handled = this.selectedTreeElement.onenter();
+    } else if (event.keyCode === WebInspector.KeyboardShortcut.Keys.Space.code) {
+        if (this.selectedTreeElement.onspace)
+            handled = this.selectedTreeElement.onspace();
     }
 
     if (nextSelectedElement) {
@@ -407,10 +392,8 @@ TreeOutline.prototype._treeKeyDown = function(event)
         nextSelectedElement.select(false, true);
     }
 
-    if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
+    if (handled)
+        event.consume(true);
 }
 
 TreeOutline.prototype.expand = function()
@@ -530,10 +513,9 @@ TreeOutline.prototype._searchInputKeyDown = function(event)
     if (nextSelectedElement)
         this._showSearchMatchElement(nextSelectedElement);
         
-    if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
-    } else
+    if (handled)
+        event.consume(true);
+    else
        window.setTimeout(this._boundSearchTextChanged, 0); 
 }
 
@@ -766,7 +748,6 @@ TreeElement.prototype.insertChild = TreeOutline.prototype.insertChild;
 TreeElement.prototype.removeChild = TreeOutline.prototype.removeChild;
 TreeElement.prototype.removeChildAtIndex = TreeOutline.prototype.removeChildAtIndex;
 TreeElement.prototype.removeChildren = TreeOutline.prototype.removeChildren;
-TreeElement.prototype.removeChildrenRecursive = TreeOutline.prototype.removeChildrenRecursive;
 
 TreeElement.prototype._attach = function()
 {
@@ -850,7 +831,7 @@ TreeElement.treeElementToggled = function(event)
         else
             element.treeElement.expand();
     }
-    event.stopPropagation();
+    event.consume();
 }
 
 TreeElement.treeElementDoubleClicked = function(event)
@@ -999,11 +980,8 @@ TreeElement.prototype.revealed = function()
 
 TreeElement.prototype.selectOnMouseDown = function(event)
 {
-    if (this.select(false, true)) {
-        event.stopPropagation();
-        event.preventDefault();
-        event.handled = true;
-    }
+    if (this.select(false, true))
+        event.consume(true);
 }
 
 /**
@@ -1139,7 +1117,8 @@ TreeElement.prototype.traversePreviousTreeElement = function(skipUnrevealed, don
 TreeElement.prototype.isEventWithinDisclosureTriangle = function(event)
 {
     // FIXME: We should not use getComputedStyle(). For that we need to get rid of using ::before for disclosure triangle. (http://webk.it/74446) 
-    var computedLeftPadding = window.getComputedStyle(this._listItemNode).getPropertyCSSValue("padding-left").getFloatValue(CSSPrimitiveValue.CSS_PX);
+    var paddingLeftValue = window.getComputedStyle(this._listItemNode).getPropertyCSSValue("padding-left");
+    var computedLeftPadding = paddingLeftValue ? paddingLeftValue.getFloatValue(CSSPrimitiveValue.CSS_PX) : 0;
     var left = this._listItemNode.totalOffsetLeft() + computedLeftPadding;
     return event.pageX >= left && event.pageX <= left + this.arrowToggleWidth && this.hasChildren;
 }

@@ -634,10 +634,14 @@ WebInspector.ElementsTreeElement.prototype = {
             }
         }
 
-        var updater = show ? updateEntryShow : updateEntryHide;
-
-        for (var i = 0, size = this._highlightResult.length; i < size; ++i)
-            updater(this._highlightResult[i]);
+        // Preserve the semantic of node by following the order of updates for hide and show.
+        if (show) {
+            for (var i = 0, size = this._highlightResult.length; i < size; ++i)
+                updateEntryShow(this._highlightResult[i]);
+        } else {
+            for (var i = (this._highlightResult.length - 1); i >= 0; --i)
+                updateEntryHide(this._highlightResult[i]);
+        }
     },
 
     get hovered()
@@ -1230,6 +1234,12 @@ WebInspector.ElementsTreeElement.prototype = {
         if (this._htmlEditElement && WebInspector.isBeingEdited(this._htmlEditElement))
             return;
 
+        function consume(event)
+        {
+            if (event.eventPhase === Event.AT_TARGET)
+                event.consume(true);
+        }
+
         this._htmlEditElement = document.createElement("div");
         this._htmlEditElement.className = "source-code elements-tree-editor";
         this._htmlEditElement.textContent = initialValue;
@@ -1245,6 +1255,7 @@ WebInspector.ElementsTreeElement.prototype = {
             this._childrenListNode.style.display = "none";
         // Append editor.
         this.listItemElement.appendChild(this._htmlEditElement);
+        this.treeOutline.childrenListElement.parentElement.addEventListener("mousedown", consume, false);
 
         this.updateSelection();
 
@@ -1271,6 +1282,7 @@ WebInspector.ElementsTreeElement.prototype = {
                 child = child.nextSibling;
             }
 
+            this.treeOutline.childrenListElement.parentElement.removeEventListener("mousedown", consume, false);
             this.updateSelection();
         }
 
@@ -1482,7 +1494,7 @@ WebInspector.ElementsTreeElement.prototype = {
                 var attrValueElement = attrSpanElement.createChild("span", "webkit-html-attribute-value");
                 attrValueElement.textContent = value;
             } else {
-                if (value.indexOf("data:") === 0)
+                if (value.startsWith("data:"))
                     value = value.trimMiddle(60);
                 attrSpanElement.appendChild(linkify(rewrittenHref, value, "webkit-html-attribute-value", node.nodeName().toLowerCase() === "a"));
             }
@@ -1505,6 +1517,8 @@ WebInspector.ElementsTreeElement.prototype = {
         var classes = [ "webkit-html-tag" ];
         if (isClosingTag && isDistinctTreeElement)
             classes.push("close");
+        if (node.isInShadowTree())
+            classes.push("shadow");
         var tagElement = parentElement.createChild("span", classes.join(" "));
         tagElement.appendChild(document.createTextNode("<"));
         var tagNameElement = tagElement.createChild("span", isClosingTag ? "" : "webkit-html-tag-name");
@@ -1527,10 +1541,6 @@ WebInspector.ElementsTreeElement.prototype = {
         var info = {titleDOM: document.createDocumentFragment(), hasChildren: this.hasChildren};
 
         switch (node.nodeType()) {
-            case Node.DOCUMENT_FRAGMENT_NODE:
-                info.titleDOM.appendChild(document.createTextNode("Document Fragment"));
-                break;
-
             case Node.ATTRIBUTE_NODE:
                 var value = node.value || "\u200B"; // Zero width space to force showing an empty value.
                 this._buildAttributeDOM(info.titleDOM, node.name, value);
@@ -1616,10 +1626,15 @@ WebInspector.ElementsTreeElement.prototype = {
                 var cdataElement = info.titleDOM.createChild("span", "webkit-html-text-node");
                 cdataElement.appendChild(document.createTextNode("<![CDATA[" + node.nodeValue() + "]]>"));
                 break;
+            case Node.DOCUMENT_FRAGMENT_NODE:
+                var fragmentElement = info.titleDOM.createChild("span", "webkit-html-fragment");
+                fragmentElement.textContent = node.nodeNameInCorrectCase().collapseWhitespace();
+                if (node.isInShadowTree())
+                    fragmentElement.addStyleClass("shadow");
+                break;
             default:
-                var defaultElement = info.titleDOM.appendChild(document.createTextNode(node.nodeNameInCorrectCase().collapseWhitespace()));
+                info.titleDOM.appendChild(document.createTextNode(node.nodeNameInCorrectCase().collapseWhitespace()));
         }
-
         return info;
     },
 
@@ -1742,7 +1757,7 @@ WebInspector.ElementsTreeElement.prototype = {
             matchRanges.push({ offset: 0, length: text.length });
 
         this._highlightResult = [];
-        highlightSearchResults(this.listItemElement, matchRanges, this._highlightResult);
+        WebInspector.highlightSearchResults(this.listItemElement, matchRanges, this._highlightResult);
     }
 }
 
@@ -1831,6 +1846,13 @@ WebInspector.ElementsTreeUpdater.prototype = {
 
         for (var i = 0; i < this._recentlyModifiedNodes.length; ++i) {
             var parent = this._recentlyModifiedNodes[i].parent;
+
+            if (parent === this._treeOutline._rootDOMNode) {
+                // Document's children have changed, perform total update.
+                this._treeOutline.update();
+                return;
+            }
+
             var node = this._recentlyModifiedNodes[i].node;
 
             if (this._recentlyModifiedNodes[i].updated) {

@@ -34,10 +34,12 @@ WebInspector.Spectrum = function()
 {
     this._popover = new WebInspector.Popover();
     this._popover.setCanShrink(false);
-    this._popover.element.addEventListener("mousedown", stopPropagation, false);
+    this._popover.element.addEventListener("mousedown", consumeEvent, false);
 
     this._containerElement = document.createElement('div');
     this._containerElement.className = "spectrum-container";
+    this._containerElement.tabIndex = 0;
+    this._containerElement.addEventListener("keydown", this._onKeyDown.bind(this), false);
 
     var topElement = this._containerElement.createChild("div", "spectrum-top");
     topElement.createChild("div", "spectrum-fill");
@@ -51,7 +53,7 @@ WebInspector.Spectrum = function()
 
     var rangeContainer = this._containerElement.createChild("div", "spectrum-range-container");
     var alphaLabel = rangeContainer.createChild("label");
-    alphaLabel.textContent = WebInspector.UIString("alpha: ");
+    alphaLabel.textContent = WebInspector.UIString("\u03B1:");
 
     this._alphaElement = rangeContainer.createChild("input", "spectrum-range");
     this._alphaElement.setAttribute("type", "range");
@@ -92,7 +94,7 @@ WebInspector.Spectrum = function()
         this._onchange();
     }
 
-    this._hideProxy = this.hide.bind(this);
+    this._hideProxy = this.hide.bind(this, true);
 };
 
 WebInspector.Spectrum.Events = {
@@ -184,13 +186,9 @@ WebInspector.Spectrum.draggable = function(element, onmove, onstart, onstop) {
     var maxHeight;
     var maxWidth;
 
-    function prevent(e)
+    function consume(e)
     {
-        if (e.stopPropagation)
-            e.stopPropagation();
-
-        if (e.preventDefault)
-            e.preventDefault();
+        e.consume(true);
     }
 
     function move(e)
@@ -220,21 +218,21 @@ WebInspector.Spectrum.draggable = function(element, onmove, onstart, onstop) {
             scrollOffset = element.scrollOffset();
             offset = element.totalOffset();
 
-            doc.addEventListener("selectstart", prevent, false);
-            doc.addEventListener("dragstart", prevent, false);
+            doc.addEventListener("selectstart", consume, false);
+            doc.addEventListener("dragstart", consume, false);
             doc.addEventListener("mousemove", move, false);
             doc.addEventListener("mouseup", stop, false);
 
             move(e);
-            prevent(e);
+            consume(e);
         }
     }
 
     function stop(e)
     {
         if (dragging) {
-            doc.removeEventListener("selectstart", prevent, false);
-            doc.removeEventListener("dragstart", prevent, false);
+            doc.removeEventListener("selectstart", consume, false);
+            doc.removeEventListener("dragstart", consume, false);
             doc.removeEventListener("mousemove", move, false);
             doc.removeEventListener("mouseup", stop, false);
 
@@ -366,7 +364,7 @@ WebInspector.Spectrum.prototype = {
     toggle: function(element, color, format)
     {
         if (this.visible)
-            this.hide();
+            this.hide(true);
         else
             this.show(element, color, format);
 
@@ -380,7 +378,7 @@ WebInspector.Spectrum.prototype = {
                 return false;
 
             // Reopen the picker for another anchor element.
-            this.hide();
+            this.hide(true);
         }
 
         this.reposition(element);
@@ -405,20 +403,42 @@ WebInspector.Spectrum.prototype = {
 
     reposition: function(element)
     {
+        if (!this._previousFocusElement)
+            this._previousFocusElement = WebInspector.currentFocusElement();
         this._popover.show(this._containerElement, element);
+        WebInspector.setCurrentFocusElement(this._containerElement);
     },
 
-    hide: function()
+    /**
+     * @param {boolean} commitEdit
+     */
+    hide: function(commitEdit)
     {
         this._popover.hide();
 
         document.removeEventListener("mousedown", this._hideProxy, false);
         window.removeEventListener("blur", this._hideProxy, false);
 
-        this.dispatchEventToListeners(WebInspector.Spectrum.Events.Hidden);
+        this.dispatchEventToListeners(WebInspector.Spectrum.Events.Hidden, !!commitEdit);
+
+        WebInspector.setCurrentFocusElement(this._previousFocusElement);
+        delete this._previousFocusElement;
 
         delete this.anchorElement;
+    },
+
+    _onKeyDown: function(event)
+    {
+        if (event.keyIdentifier === "Enter") {
+            this.hide(true);
+            event.consume(true);
+            return;
+        }
+        if (event.keyIdentifier === "U+001B") { // Escape key
+            this.hide(false);
+            event.consume(true);
+        }
     }
-};
+}
 
 WebInspector.Spectrum.prototype.__proto__ = WebInspector.Object.prototype;

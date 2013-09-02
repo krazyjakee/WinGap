@@ -29,18 +29,20 @@
 /**
  * @constructor
  * @implements {WebInspector.SearchScope}
+ * @param {WebInspector.UISourceCodeProvider} uiSourceCodeProvider
  */
-WebInspector.ScriptsSearchScope = function()
+WebInspector.ScriptsSearchScope = function(uiSourceCodeProvider)
 {
     // FIXME: Add title once it is used by search controller.
     WebInspector.SearchScope.call(this)
     this._searchId = 0;
+    this._uiSourceCodeProvider = uiSourceCodeProvider;
 }
 
 WebInspector.ScriptsSearchScope.prototype = {
     /**
      * @param {WebInspector.SearchConfig} searchConfig
-     * @param {function(Object)} searchResultCallback
+     * @param {function(WebInspector.FileBasedSearchResultsPane.SearchResult)} searchResultCallback
      * @param {function(boolean)} searchFinishedCallback
      */
     performSearch: function(searchConfig, searchResultCallback, searchFinishedCallback)
@@ -95,7 +97,7 @@ WebInspector.ScriptsSearchScope.prototype = {
      */
     createSearchResultsPane: function(searchConfig)
     {
-        return new WebInspector.ScriptsSearchResultsPane(searchConfig);
+        return new WebInspector.FileBasedSearchResultsPane(searchConfig);
     },
 
     /**
@@ -113,7 +115,7 @@ WebInspector.ScriptsSearchScope.prototype = {
             return a.url.localeCompare(b.url);   
         }
         
-        var uiSourceCodes = WebInspector.debuggerPresentationModel.uiSourceCodes();
+        var uiSourceCodes = this._uiSourceCodeProvider.uiSourceCodes();
         
         uiSourceCodes = uiSourceCodes.filter(filterOutAnonymous);
         uiSourceCodes.sort(comparator);
@@ -123,68 +125,5 @@ WebInspector.ScriptsSearchScope.prototype = {
 }
 
 WebInspector.ScriptsSearchScope.prototype.__proto__ = WebInspector.SearchScope.prototype;
-
-/**
- * @constructor
- * @extends {WebInspector.FileBasedSearchResultsPane}
- * @param {WebInspector.SearchConfig} searchConfig
- */
-WebInspector.ScriptsSearchResultsPane = function(searchConfig)
-{
-    WebInspector.FileBasedSearchResultsPane.call(this, searchConfig)
-
-    this._linkifier = WebInspector.debuggerPresentationModel.createLinkifier(new WebInspector.ScriptsSearchResultsPane.LinkifierFormatter());
-}
-
-WebInspector.ScriptsSearchResultsPane.prototype = {
-    /**
-     * @param {Object} file
-     * @param {number} lineNumber
-     * @param {number} columnNumber
-     */
-    createAnchor: function(file, lineNumber, columnNumber)
-    {
-        
-        var uiSourceCode = file;
-        var rawSourceCode = uiSourceCode.rawSourceCode;
-        var rawLocation = rawSourceCode.sourceMapping.uiLocationToRawLocation(uiSourceCode, lineNumber, columnNumber);
-        var anchor = this._linkifier.linkifyRawSourceCode(uiSourceCode.rawSourceCode, rawLocation.lineNumber, rawLocation.columnNumber);
-        anchor.removeChildren();
-        return anchor;
-    },
-    
-    /**
-     * @param {Object} file
-     * @return {string}
-     */
-    fileName: function(file)
-    {
-        var uiSourceCode = file;
-        return uiSourceCode.url;
-    },
-}
-
-WebInspector.ScriptsSearchResultsPane.prototype.__proto__ = WebInspector.FileBasedSearchResultsPane.prototype;
-
-/**
- * @constructor
- * @implements {WebInspector.DebuggerPresentationModel.LinkifierFormatter}
- */
-WebInspector.ScriptsSearchResultsPane.LinkifierFormatter = function()
-{
-}
-
-WebInspector.ScriptsSearchResultsPane.LinkifierFormatter.prototype = {
-    /**
-     * @param {WebInspector.RawSourceCode} rawSourceCode
-     * @param {Element} anchor
-     */
-    formatRawSourceCodeAnchor: function(rawSourceCode, anchor)
-    {
-        // Empty because we don't want to ever update anchor contents after creation.
-    }
-}
-
-WebInspector.ScriptsSearchResultsPane.LinkifierFormatter.prototype.__proto__ = WebInspector.DebuggerPresentationModel.LinkifierFormatter.prototype;
 
 WebInspector.settings.searchInContentScripts = WebInspector.settings.createSetting("searchInContentScripts", false);

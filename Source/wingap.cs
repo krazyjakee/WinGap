@@ -30,7 +30,7 @@ namespace WinGap
 
         public void quit()
         {
-            Environment.Exit(0);
+            Application.Exit();
         }
 
         public void open(string address, string args = "")

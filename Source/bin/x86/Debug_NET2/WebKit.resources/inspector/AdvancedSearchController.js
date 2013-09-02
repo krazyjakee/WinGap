@@ -50,13 +50,20 @@ WebInspector.AdvancedSearchController.createShortcut = function()
 WebInspector.AdvancedSearchController.prototype = {
     /**
      * @param {Event} event
+     * @return {boolean}
      */
     handleShortcut: function(event)
     {
         if (WebInspector.KeyboardShortcut.makeKeyFromEvent(event) === this._shortcut.key) {
-            this.show();
-            event.handled = true;
+            if (!this._searchView || !this._searchView.isShowing() || this._searchView._search !== document.activeElement) {
+                WebInspector.inspectorView.setCurrentPanel(WebInspector.panels.scripts);
+                this.show();
+            } else
+                this.close();
+            event.consume(true);
+            return true;
         }
+        return false;
     },
 
     _frameNavigated: function()
@@ -81,18 +88,18 @@ WebInspector.AdvancedSearchController.prototype = {
         if (this._searchView.isShowing())
             this._searchView.focus();
         else
-            WebInspector.showViewInDrawer(this._searchView);
+            WebInspector.showViewInDrawer(this._searchView._searchPanelElement, this._searchView, this.stopSearch.bind(this));
     },
 
     close: function()
     {
         this.stopSearch();
-        WebInspector.closeDrawerView();
+        WebInspector.closeViewInDrawer();
     },
 
     /**
      * @param {number} searchId
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      */
     _onSearchResult: function(searchId, searchResult)
     {
@@ -171,19 +178,20 @@ WebInspector.SearchView = function(controller)
 
     this.element.className = "search-view";
 
-    this._searchPanelElement = this.element.createChild("div");
-    this._searchPanelElement.tabIndex = 0;
-    this._searchPanelElement.className = "search-panel";
+    this._searchPanelElement = document.createElement("span");
+    this._searchPanelElement.className = "search-drawer-header";
     this._searchPanelElement.addEventListener("keydown", this._onKeyDown.bind(this), false);
     
     this._searchResultsElement = this.element.createChild("div");
     this._searchResultsElement.className = "search-results";
     
+    this._searchLabel = this._searchPanelElement.createChild("span");
+    this._searchLabel.textContent = WebInspector.UIString("Search sources");
     this._search = this._searchPanelElement.createChild("input");
     this._search.setAttribute("type", "search");
     this._search.addStyleClass("search-config-search");
     this._search.setAttribute("results", "0");
-    this._search.setAttribute("size", 20);
+    this._search.setAttribute("size", 30);
 
     this._ignoreCaseLabel = this._searchPanelElement.createChild("label");
     this._ignoreCaseLabel.addStyleClass("search-config-label");
@@ -198,11 +206,6 @@ WebInspector.SearchView = function(controller)
     this._regexCheckbox.setAttribute("type", "checkbox");
     this._regexCheckbox.addStyleClass("search-config-checkbox");
     this._regexLabel.appendChild(document.createTextNode(WebInspector.UIString("Regular expression")));
-    
-    this._searchDoneButton = this._searchPanelElement.createChild("button");
-    this._searchDoneButton.textContent = WebInspector.UIString("Close");
-    this._searchDoneButton.addStyleClass("search-close-button");
-    this._searchDoneButton.addEventListener("click", this._closeButtonPressed.bind(this));
     
     this._searchStatusBarElement = document.createElement("div");
     this._searchStatusBarElement.className = "search-status-bar-item";
@@ -228,7 +231,7 @@ WebInspector.SearchView.maxQueriesCount = 20;
 
 WebInspector.SearchView.prototype = {
     /**
-     * @type {Array.<Element>}
+     * @return {Array.<Element>}
      */
     get statusBarItems()
     {
@@ -236,7 +239,7 @@ WebInspector.SearchView.prototype = {
     },
 
     /**
-     * @type {Element}
+     * @return {Element}
      */
     get counterElement()
     {
@@ -244,15 +247,11 @@ WebInspector.SearchView.prototype = {
     },
 
     /**
-     * @type {WebInspector.SearchConfig}
+     * @return {WebInspector.SearchConfig}
      */
     get searchConfig()
     {
-        var searchConfig = {};
-        searchConfig.query = this._search.value;
-        searchConfig.ignoreCase = this._ignoreCaseCheckbox.checked;
-        searchConfig.isRegex = this._regexCheckbox.checked;
-        return searchConfig;
+        return new WebInspector.SearchConfig(this._search.value, this._ignoreCaseCheckbox.checked, this._regexCheckbox.checked);
     },
     
     /**
@@ -327,7 +326,7 @@ WebInspector.SearchView.prototype = {
     },
 
     /**
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      */
     addSearchResult: function(searchResult)
     {
@@ -360,7 +359,7 @@ WebInspector.SearchView.prototype = {
         this.focus();
     },
 
-    wasHidden: function()
+    willHide: function()
     {
         this._controller.stopSearch();
     },
@@ -376,8 +375,7 @@ WebInspector.SearchView.prototype = {
             break;
         case WebInspector.KeyboardShortcut.Keys.Esc.code:
             this._controller.close();
-            event.stopPropagation();
-            event.preventDefault();
+            event.consume(true);
             break;
         }        
     },
@@ -394,11 +392,6 @@ WebInspector.SearchView.prototype = {
         this._search.value = searchConfig.query;
         this._ignoreCaseCheckbox.checked = searchConfig.ignoreCase;
         this._regexCheckbox.checked = searchConfig.isRegex;
-    },
-
-    _closeButtonPressed: function()
-    {
-        this._controller.close();
     },
 
     _searchStopButtonPressed: function()
@@ -442,7 +435,7 @@ WebInspector.SearchScope = function()
 WebInspector.SearchScope.prototype = {
     /**
      * @param {WebInspector.SearchConfig} searchConfig
-     * @param {function(Object)} searchResultCallback
+     * @param {function(WebInspector.FileBasedSearchResultsPane.SearchResult)} searchResultCallback
      * @param {function(boolean)} searchFinishedCallback
      */
     performSearch: function(searchConfig, searchResultCallback, searchFinishedCallback) { },
@@ -451,9 +444,20 @@ WebInspector.SearchScope.prototype = {
     
     /**
      * @param {WebInspector.SearchConfig} searchConfig
-     * @return WebInspector.SearchResultsPane}
+     * @return {WebInspector.SearchResultsPane}
      */
     createSearchResultsPane: function(searchConfig) { }
+}
+
+/**
+ * @constructor
+ * @param {number} offset
+ * @param {number} length
+ */
+WebInspector.SearchResult = function(offset, length)
+{
+    this.offset = offset;
+    this.length = length;    
 }
 
 /**
@@ -468,7 +472,7 @@ WebInspector.SearchResultsPane = function(searchConfig)
 
 WebInspector.SearchResultsPane.prototype = {
     /**
-     * @type {WebInspector.SearchConfig}
+     * @return {WebInspector.SearchConfig}
      */
     get searchConfig()
     {
@@ -476,7 +480,7 @@ WebInspector.SearchResultsPane.prototype = {
     },
 
     /**
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      */
     addSearchResult: function(searchResult) { }
 }
@@ -495,8 +499,7 @@ WebInspector.FileBasedSearchResultsPane = function(searchConfig)
     this.element.id ="search-results-pane-file-based";
     
     this._treeOutlineElement = document.createElement("ol");
-    this._treeOutlineElement.className = "outline-disclosure";
-    this._treeOutlineElement.addStyleClass("search-results-outline-disclosure");
+    this._treeOutlineElement.className = "search-results-outline-disclosure";
     this.element.appendChild(this._treeOutlineElement);
     this._treeOutline = new TreeOutline(this._treeOutlineElement);
     
@@ -508,34 +511,35 @@ WebInspector.FileBasedSearchResultsPane.fileMatchesShownAtOnce = 20;
 
 WebInspector.FileBasedSearchResultsPane.prototype = {
     /**
-     * @param {Object} file
+     * @param {WebInspector.UISourceCode} uiSourceCode
      * @param {number} lineNumber
      * @param {number} columnNumber
      * @return {Element}
      */
-    createAnchor: function(file, lineNumber, columnNumber) { },
+    _createAnchor: function(uiSourceCode, lineNumber, columnNumber)
+    {
+        var anchor = document.createElement("a");
+        anchor.preferredPanel = "scripts";
+        anchor.href = uiSourceCode.url;
+        anchor.uiSourceCode = uiSourceCode;
+        anchor.lineNumber = lineNumber;
+        return anchor;
+    },
 
     /**
-     * @param {Object} file
-     * @return {string}
-     */
-    fileName: function(file) { },
-
-    /**
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      */
     addSearchResult: function(searchResult)
     {
         this._searchResults.push(searchResult);
-        var file = searchResult.file;
-        var fileName = this.fileName(file);
+        var uiSourceCode = searchResult.uiSourceCode;
         var searchMatches = searchResult.searchMatches;
 
-        var fileTreeElement = this._addFileTreeElement(fileName, searchMatches.length, this._searchResults.length - 1);
+        var fileTreeElement = this._addFileTreeElement(uiSourceCode.url, searchMatches.length, this._searchResults.length - 1);
     },
 
     /**
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      * @param {TreeElement} fileTreeElement
      */
     _fileTreeElementExpanded: function(searchResult, fileTreeElement)
@@ -555,23 +559,22 @@ WebInspector.FileBasedSearchResultsPane.prototype = {
 
     /**
      * @param {TreeElement} fileTreeElement
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      * @param {number} fromIndex
      * @param {number} toIndex
      */
     _appendSearchMatches: function(fileTreeElement, searchResult, fromIndex, toIndex)
     {
-        var file = searchResult.file;
-        var fileName = this.fileName(file);
+        var uiSourceCode = searchResult.uiSourceCode;
         var searchMatches = searchResult.searchMatches;
-        
+
         var regex = createSearchRegex(this._searchConfig.query, !this._searchConfig.ignoreCase, this._searchConfig.isRegex);
         for (var i = fromIndex; i < toIndex; ++i) {
             var lineNumber = searchMatches[i].lineNumber;
             var lineContent = searchMatches[i].lineContent;
             var matchRanges = this._regexMatchRanges(lineContent, regex);
             
-            var anchor = this.createAnchor(file, lineNumber, matchRanges[0].offset);
+            var anchor = this._createAnchor(uiSourceCode, lineNumber, matchRanges[0].offset);
             
             var numberString = numberToStringWithSpacesPadding(lineNumber + 1, 4);
             var lineNumberSpan = document.createElement("span");
@@ -585,14 +588,14 @@ WebInspector.FileBasedSearchResultsPane.prototype = {
             
             var searchMatchElement = new TreeElement("", null, false);
             fileTreeElement.appendChild(searchMatchElement);
-            searchMatchElement.listItemElement.className = "search-match";
+            searchMatchElement.listItemElement.className = "search-match source-code";
             searchMatchElement.listItemElement.appendChild(anchor);
         }
     },
 
     /**
      * @param {TreeElement} fileTreeElement
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      * @param {number} startMatchIndex
      */
     _appendShowMoreMatchesElement: function(fileTreeElement, searchResult, startMatchIndex)
@@ -606,7 +609,7 @@ WebInspector.FileBasedSearchResultsPane.prototype = {
     },
 
     /**
-     * @param {Object} searchResult
+     * @param {WebInspector.FileBasedSearchResultsPane.SearchResult} searchResult
      * @param {number} startMatchIndex
      * @param {TreeElement} showMoreMatchesElement
      */
@@ -659,7 +662,7 @@ WebInspector.FileBasedSearchResultsPane.prototype = {
     /**
      * @param {string} lineContent
      * @param {RegExp} regex
-     * @return {Array.<Object>}
+     * @return {Array.<WebInspector.SearchResult>}
      */
     _regexMatchRanges: function(lineContent, regex)
     {
@@ -668,21 +671,21 @@ WebInspector.FileBasedSearchResultsPane.prototype = {
         var offset = 0;
         var matchRanges = [];
         while ((regex.lastIndex < lineContent.length) && (match = regex.exec(lineContent)))
-            matchRanges.push({ offset: match.index, length: match[0].length });
-        
+            matchRanges.push(new WebInspector.SearchResult(match.index, match[0].length));
+
         return matchRanges;
     },
     
     /**
      * @param {string} lineContent
-     * @param {Array.<Object>} matchRanges
+     * @param {Array.<WebInspector.SearchResult>} matchRanges
      */
     _createContentSpan: function(lineContent, matchRanges)
     {
         var contentSpan = document.createElement("span");
         contentSpan.className = "search-match-content";
         contentSpan.textContent = lineContent;
-        highlightRangesWithStyleClass(contentSpan, matchRanges, "highlighted-match");
+        WebInspector.highlightRangesWithStyleClass(contentSpan, matchRanges, "highlighted-match");
         return contentSpan;
     }
 }
@@ -691,11 +694,11 @@ WebInspector.FileBasedSearchResultsPane.prototype.__proto__ = WebInspector.Searc
 
 /**
  * @constructor
- * @param {Object} file
+ * @param {WebInspector.UISourceCode} uiSourceCode
  * @param {Array.<Object>} searchMatches
  */
-WebInspector.FileBasedSearchResultsPane.SearchResult = function(file, searchMatches) {
-    this.file = file;
+WebInspector.FileBasedSearchResultsPane.SearchResult = function(uiSourceCode, searchMatches) {
+    this.uiSourceCode = uiSourceCode;
     this.searchMatches = searchMatches;
 }
 

@@ -31,15 +31,55 @@
 WebInspector = {};
 WebInspector.UIString = function(s) { return s; };
 
-importScripts("BinarySearch.js");
 importScripts("HeapSnapshot.js");
+importScripts("HeapSnapshotLoader.js");
 importScripts("HeapSnapshotWorkerDispatcher.js");
-importScripts("PartialQuickSort.js");
+importScripts("utilities.js");
 
 function postMessageWrapper(message)
 {
     postMessage(message);
 }
 
+/**
+ * @constructor
+ */
+WebInspector.WorkerConsole = function()
+{
+}
+
+WebInspector.WorkerConsole.prototype = {
+    log: function()
+    {
+        this._postMessage("log", Array.prototype.slice.call(arguments));
+    },
+
+    error: function()
+    {
+        this._postMessage("error", Array.prototype.slice.call(arguments));
+    },
+
+    info: function()
+    {
+        this._postMessage("info", Array.prototype.slice.call(arguments));
+    },
+
+    trace: function()
+    {
+        this.log(new Error().stack);
+    },
+
+    _postMessage: function(method, args)
+    {
+        var rawMessage = {
+            object: "console",
+            method: method,
+            arguments: args
+        };
+        postMessageWrapper(rawMessage);
+    }
+};
+
 var dispatcher = new WebInspector.HeapSnapshotWorkerDispatcher(this, postMessageWrapper);
 addEventListener("message", dispatcher.dispatchMessage.bind(dispatcher), false);
+console = new WebInspector.WorkerConsole();

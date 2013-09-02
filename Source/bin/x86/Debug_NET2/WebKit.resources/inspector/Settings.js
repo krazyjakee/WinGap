@@ -52,7 +52,9 @@ var Capabilities = {
     debuggerCausesRecompilation: true,
     profilerCausesRecompilation: true,
     nativeInstrumentationEnabled: false,
-    heapProfilerPresent: false
+    heapProfilerPresent: false,
+    canOverrideDeviceMetrics: false,
+    timelineSupportsFrameInstrumentation: false,
 }
 
 /**
@@ -86,14 +88,20 @@ WebInspector.Settings = function()
     this.cacheDisabled = this.createSetting("cacheDisabled", false);
     this.overrideUserAgent = this.createSetting("overrideUserAgent", "");
     this.userAgent = this.createSetting("userAgent", "");
+    this.deviceMetrics = this.createSetting("deviceMetrics", "");
+    this.deviceFitWindow = this.createSetting("deviceFitWindow", false);
     this.showScriptFolders = this.createSetting("showScriptFolders", true);
     this.dockToRight = this.createSetting("dockToRight", false);
     this.emulateTouchEvents = this.createSetting("emulateTouchEvents", false);
+    this.showPaintRects = this.createSetting("showPaintRects", false);
+    this.zoomLevel = this.createSetting("zoomLevel", 0);
+    this.savedURLs = this.createSetting("savedURLs", {});
+    this.javaScriptDisabled = this.createSetting("javaScriptDisabled", false);
 
     // If there are too many breakpoints in a storage, it is likely due to a recent bug that caused
     // periodical breakpoints duplication leading to inspector slowness.
-    if (window.localStorage.breakpoints && window.localStorage.breakpoints.length > 500000)
-        delete window.localStorage.breakpoints;
+    if (this.breakpoints.get().length > 500000)
+        this.breakpoints.set([]);
 }
 
 WebInspector.Settings.prototype = {
@@ -172,17 +180,16 @@ WebInspector.ExperimentsSettings = function()
     this._enabledForTest = {};
     
     // Add currently running experiments here.
-    this.sourceFrameAlwaysEditable = this._createExperiment("sourceFrameAlwaysEditable", "Make resources always editable");
-    this.showMemoryCounters = this._createExperiment("showMemoryCounters", "Show memory counters in Timeline panel");
-    // FIXME: Enable http/tests/inspector/indexeddb/resources-panel.html when removed from experiments.
-    this.showIndexedDB = this._createExperiment("showIndexedDB", "Show IndexedDB in Resources panel");
+    this.showShadowDOM = this._createExperiment("showShadowDOM", "Show shadow DOM");
+    this.snippetsSupport = this._createExperiment("snippetsSupport", "Snippets support");
+    this.nativeMemorySnapshots = this._createExperiment("nativeMemorySnapshots", "Native memory profiling");
 
     this._cleanUpSetting();
 }
 
 WebInspector.ExperimentsSettings.prototype = {
     /**
-     * @type {Array.<WebInspector.Experiment>}
+     * @return {Array.<WebInspector.Experiment>}
      */
     get experiments()
     {
@@ -190,7 +197,7 @@ WebInspector.ExperimentsSettings.prototype = {
     },
     
     /**
-     * @type {boolean}
+     * @return {boolean}
      */
     get experimentsEnabled()
     {

@@ -30,15 +30,15 @@
 
 /**
  * @constructor
- * @extends {WebInspector.DialogDelegate}
  * @param {WebInspector.View} view
  * @param {string} widthSettingName
  * @param {number} minimalWidth
  */
 WebInspector.SidebarOverlay = function(view, widthSettingName, minimalWidth)
 {
-    WebInspector.DialogDelegate.call(this);
-    
+    this.element = document.createElement("div");
+    this.element.className = "sidebar-overlay";
+
     this._view = view;
     this._widthSettingName = widthSettingName;
     this._minimalWidth = minimalWidth;
@@ -52,41 +52,28 @@ WebInspector.SidebarOverlay = function(view, widthSettingName, minimalWidth)
     this._installResizer(this._resizerElement);
 }
 
-WebInspector.SidebarOverlay.EventTypes = {
-    WasShown: "WasShown",
-    WillHide: "WillHide"
-}
-
 WebInspector.SidebarOverlay.prototype = {
     /**
-     * @param {Element} element
+     * @param {Element} relativeToElement
      */
-    show: function(element)
+    show: function(relativeToElement)
     {
-        this._element = element;
-        element.addStyleClass("sidebar-overlay-dialog");
-        this._view.markAsRoot();
-        this._view.show(element);
-        this._element.appendChild(this._resizerElement);
+        relativeToElement.appendChild(this.element);
+        relativeToElement.addStyleClass("sidebar-overlay-shown");
+        this._view.show(this.element);
+        this.element.appendChild(this._resizerElement);
         if (this._resizerWidgetElement)
-            this._element.appendChild(this._resizerWidgetElement);
-
-        this.dispatchEventToListeners(WebInspector.SidebarOverlay.EventTypes.WasShown, null);
+            this.element.appendChild(this._resizerWidgetElement);
+        this.position(relativeToElement);
     },
 
     /**
-     * @param {Element} element
      * @param {Element} relativeToElement
      */
-    position: function(element, relativeToElement)
+    position: function(relativeToElement)
     {
         this._totalWidth = relativeToElement.offsetWidth;
-        
-        var offset = relativeToElement.offsetRelativeToWindow(window);
-        element.style.left = offset.x + "px";
-        element.style.top = offset.y + "px";
         this._setWidth(this._preferredWidth());
-        element.style.height = relativeToElement.offsetHeight + "px";
     },
 
     focus: function()
@@ -94,17 +81,18 @@ WebInspector.SidebarOverlay.prototype = {
         WebInspector.setCurrentFocusElement(this._view.element);
     },
 
-    willHide: function() {
-        this._view.detach();
-        this.dispatchEventToListeners(WebInspector.SidebarOverlay.EventTypes.WillHide, null);
-    },
-    
-    /**
-     * @param {Element} relativeToElement
-     */
-    start: function(relativeToElement)
+    hide: function()
     {
-        WebInspector.Dialog.show(relativeToElement, this);
+        var element = this.element.parentElement;
+        if (!element)
+            return;
+
+        this._view.detach();
+        element.removeChild(this.element);
+        element.removeStyleClass("sidebar-overlay-shown");
+        this.element.removeChild(this._resizerElement);
+        if (this._resizerWidgetElement)
+            this.element.removeChild(this._resizerWidgetElement);
     },
     
     /**
@@ -117,7 +105,7 @@ WebInspector.SidebarOverlay.prototype = {
         if (this._width === width)
             return;
 
-        this._element.style.width = width + "px";
+        this.element.style.width = width + "px";
         this._resizerElement.style.left = (width - 3) + "px";
         this._width = width;
         this._view.doResize();
@@ -190,5 +178,3 @@ WebInspector.SidebarOverlay.prototype = {
         this._installResizer(resizerWidgetElement);
     }
 }
-
-WebInspector.SidebarOverlay.prototype.__proto__ = WebInspector.DialogDelegate.prototype;

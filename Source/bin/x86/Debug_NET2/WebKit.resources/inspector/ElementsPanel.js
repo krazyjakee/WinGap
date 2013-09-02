@@ -115,7 +115,7 @@ WebInspector.ElementsPanel.prototype = {
         return [this.crumbsElement];
     },
 
-    get defaultFocusedElement()
+    defaultFocusedElement: function()
     {
         return this.treeOutline.element;
     },
@@ -153,6 +153,11 @@ WebInspector.ElementsPanel.prototype = {
 
         // Detach heavy component on hide
         this.contentElement.removeChild(this.treeOutline.element);
+
+        for (var pane in this.sidebarPanes) {
+            if (this.sidebarPanes[pane].willHide)
+                this.sidebarPanes[pane].willHide();
+        }
 
         WebInspector.Panel.prototype.willHide.call(this);
     },
@@ -344,7 +349,7 @@ WebInspector.ElementsPanel.prototype = {
                 return null;
 
             var resource = WebInspector.resourceTreeModel.resourceForURL(anchor.href);
-            if (!resource || resource.type !== WebInspector.Resource.Type.Image)
+            if (!resource || resource.type !== WebInspector.resourceTypes.Image)
                 return null;
 
             anchor.removeAttribute("title");
@@ -376,7 +381,7 @@ WebInspector.ElementsPanel.prototype = {
                 return;
             }
 
-            object.callFunctionJSON(dimensions, callback);
+            object.callFunctionJSON(dimensions, undefined, callback);
             object.release();
 
             function dimensions()
@@ -386,6 +391,10 @@ WebInspector.ElementsPanel.prototype = {
         }
     },
 
+    /**
+     * @param {Element} anchor
+     * @param {WebInspector.Popover} popover
+     */
     _showPopover: function(anchor, popover)
     {
         var listItem = anchor.enclosingNodeOrSelfWithNodeNameInArray(["li"]);
@@ -1049,13 +1058,17 @@ WebInspector.ElementsPanel.prototype = {
             return;
         }
 
-        if (WebInspector.KeyboardShortcut.eventHasCtrlOrMeta(event) && event.keyIdentifier === "U+005A") { // Z key
+        if (WebInspector.KeyboardShortcut.eventHasCtrlOrMeta(event) && !event.shiftKey && event.keyIdentifier === "U+005A") { // Z key
             WebInspector.domAgent.undo(this._updateSidebars.bind(this));
+            event.handled = true;
             return;
         }
 
-        if (WebInspector.KeyboardShortcut.eventHasCtrlOrMeta(event) && event.keyIdentifier === "U+0059") { // Y key
+        var isRedoKey = WebInspector.isMac() ? event.metaKey && event.shiftKey && event.keyIdentifier === "U+005A" : // Z key
+                                               event.ctrlKey && event.keyIdentifier === "U+0059"; // Y key
+        if (isRedoKey) {
             DOMAgent.redo(this._updateSidebars.bind(this));
+            event.handled = true;
             return;
         }
 
@@ -1101,6 +1114,9 @@ WebInspector.ElementsPanel.prototype = {
 
     setSearchingForNode: function(enabled)
     {
+        /**
+         * @param {?Protocol.Error} error
+         */
         function callback(error)
         {
             if (!error)

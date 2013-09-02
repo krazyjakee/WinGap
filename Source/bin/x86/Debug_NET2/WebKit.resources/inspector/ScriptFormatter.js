@@ -38,19 +38,20 @@ WebInspector.ScriptFormatter = function()
 
 /**
  * @param {Array.<number>} lineEndings
- * @param {DebuggerAgent.Location} location
+ * @param {number} lineNumber
+ * @param {number} columnNumber
  * @return {number}
  */
-WebInspector.ScriptFormatter.locationToPosition = function(lineEndings, location)
+WebInspector.ScriptFormatter.locationToPosition = function(lineEndings, lineNumber, columnNumber)
 {
-    var position = location.lineNumber ? lineEndings[location.lineNumber - 1] + 1 : 0;
-    return position + location.columnNumber;
+    var position = lineNumber ? lineEndings[lineNumber - 1] + 1 : 0;
+    return position + columnNumber;
 }
 
 /**
  * @param {Array.<number>} lineEndings
  * @param {number} position
- * @return {DebuggerAgent.Location}
+ * @return {Array.<number>}
  */
 WebInspector.ScriptFormatter.positionToLocation = function(lineEndings, position)
 {
@@ -59,14 +60,14 @@ WebInspector.ScriptFormatter.positionToLocation = function(lineEndings, position
         var columnNumber = position;
     else
         var columnNumber = position - lineEndings[lineNumber - 1] - 1;
-    return new WebInspector.DebuggerModel.Location(lineNumber, columnNumber);
+    return [lineNumber, columnNumber];
 }
 
 WebInspector.ScriptFormatter.prototype = {
     /**
      * @param {string} mimeType
-     * @param {string} content
-     * @param {function(string, WebInspector.FormattedSourceMapping)} callback
+     * @param {?string} content
+     * @param {function(string, WebInspector.FormatterSourceMapping)} callback
      */
     formatContent: function(mimeType, content, callback)
     {
@@ -77,16 +78,13 @@ WebInspector.ScriptFormatter.prototype = {
         this._worker.postMessage({ method: method, params: parameters });
     },
 
-    /**
-     * @param {WebInspector.Event} event
-     */
     _didFormatContent: function(event)
     {
         var task = this._tasks.shift();
         var originalContent = task.data.content;
         var formattedContent = event.data.content;
         var mapping = event.data["mapping"];
-        var sourceMapping = new WebInspector.FormattedSourceMapping(originalContent.lineEndings(), formattedContent.lineEndings(), mapping);
+        var sourceMapping = new WebInspector.FormatterSourceMappingImpl(originalContent.lineEndings(), formattedContent.lineEndings(), mapping);
         task.callback(formattedContent, sourceMapping);
     },
 
@@ -97,7 +95,7 @@ WebInspector.ScriptFormatter.prototype = {
     {
         if (!this._cachedWorker) {
             this._cachedWorker = new Worker("ScriptFormatterWorker.js");
-            this._cachedWorker.onmessage = this._didFormatContent.bind(this);
+            this._cachedWorker.onmessage = /** @type {function(this:Worker)} */ this._didFormatContent.bind(this);
         }
         return this._cachedWorker;
     }
@@ -113,39 +111,95 @@ WebInspector.FormatterMappingPayload = function()
 }
 
 /**
+ * @interface
+ */
+WebInspector.FormatterSourceMapping = function()
+{
+}
+
+WebInspector.FormatterSourceMapping.prototype = {
+    /**
+     * @param {number} lineNumber
+     * @param {number=} columnNumber
+     * @return {Array.<number>}
+     */
+    originalToFormatted: function(lineNumber, columnNumber) { },
+
+    /**
+     * @param {number} lineNumber
+     * @param {number=} columnNumber
+     * @return {Array.<number>}
+     */
+    formattedToOriginal: function(lineNumber, columnNumber) { }
+}
+
+/**
  * @constructor
+ * @implements {WebInspector.FormatterSourceMapping}
+ */
+WebInspector.IdentityFormatterSourceMapping = function()
+{
+}
+
+WebInspector.IdentityFormatterSourceMapping.prototype = {
+    /**
+     * @param {number} lineNumber
+     * @param {number=} columnNumber
+     * @return {Array.<number>}
+     */
+    originalToFormatted: function(lineNumber, columnNumber)
+    {
+        return [lineNumber, columnNumber || 0]; 
+    },
+
+    /**
+     * @param {number} lineNumber
+     * @param {number=} columnNumber
+     * @return {Array.<number>}
+     */
+    formattedToOriginal: function(lineNumber, columnNumber)
+    {
+        return [lineNumber, columnNumber || 0];
+    }
+}
+
+/**
+ * @constructor
+ * @implements {WebInspector.FormatterSourceMapping}
  * @param {Array.<number>} originalLineEndings
  * @param {Array.<number>} formattedLineEndings
  * @param {WebInspector.FormatterMappingPayload} mapping
  */
-WebInspector.FormattedSourceMapping = function(originalLineEndings, formattedLineEndings, mapping)
+WebInspector.FormatterSourceMappingImpl = function(originalLineEndings, formattedLineEndings, mapping)
 {
     this._originalLineEndings = originalLineEndings;
     this._formattedLineEndings = formattedLineEndings;
     this._mapping = mapping;
 }
 
-WebInspector.FormattedSourceMapping.prototype = {
+WebInspector.FormatterSourceMappingImpl.prototype = {
     /**
-     * @param {DebuggerAgent.Location} location
-     * @return {DebuggerAgent.Location}
+     * @param {number} lineNumber
+     * @param {number=} columnNumber
+     * @return {Array.<number>}
      */
-    originalToFormatted: function(location)
+    originalToFormatted: function(lineNumber, columnNumber)
     {
-        var originalPosition = WebInspector.ScriptFormatter.locationToPosition(this._originalLineEndings, location);
-        var formattedPosition = this._convertPosition(this._mapping.original, this._mapping.formatted, originalPosition);
+        var originalPosition = WebInspector.ScriptFormatter.locationToPosition(this._originalLineEndings, lineNumber, columnNumber || 0);
+        var formattedPosition = this._convertPosition(this._mapping.original, this._mapping.formatted, originalPosition || 0);
         return WebInspector.ScriptFormatter.positionToLocation(this._formattedLineEndings, formattedPosition);
     },
 
     /**
-     * @param {DebuggerAgent.Location} location
-     * @return {DebuggerAgent.Location}
+     * @param {number} lineNumber
+     * @param {number=} columnNumber
+     * @return {Array.<number>}
      */
-    formattedToOriginal: function(location)
+    formattedToOriginal: function(lineNumber, columnNumber)
     {
-        var formattedPosition = WebInspector.ScriptFormatter.locationToPosition(this._formattedLineEndings, location);
+        var formattedPosition = WebInspector.ScriptFormatter.locationToPosition(this._formattedLineEndings, lineNumber, columnNumber || 0);
         var originalPosition = this._convertPosition(this._mapping.formatted, this._mapping.original, formattedPosition);
-        return WebInspector.ScriptFormatter.positionToLocation(this._originalLineEndings, originalPosition);
+        return WebInspector.ScriptFormatter.positionToLocation(this._originalLineEndings, originalPosition || 0);
     },
 
     /**
