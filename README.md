@@ -1,7 +1,7 @@
 WinGap
 ======
 
-Build HTML5 apps for windows
+Build HTML5 DESKTOP apps for windows
 
 Form Functions
 ==============
